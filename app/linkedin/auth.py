@@ -1,8 +1,13 @@
 import os
 import json
 import time
-from typing import Optional
-from playwright.sync_api import sync_playwright, BrowserContext, Page
+from typing import Optional, Any
+try:
+    from playwright.sync_api import sync_playwright, BrowserContext, Page
+except ImportError:
+    sync_playwright = None
+    BrowserContext = Any
+    Page = Any
 from app.config.settings import get_settings
 from app.utils.logger import setup_logger
 

@@ -4,7 +4,10 @@ import json
 import asyncio
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None
 
 from app.config.settings import get_settings
 from app.database.repository import Repository

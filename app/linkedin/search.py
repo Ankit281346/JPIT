@@ -2,7 +2,11 @@ import urllib.parse
 import re
 import time
 from typing import List, Dict, Any, Optional
-from playwright.sync_api import BrowserContext, Page
+try:
+    from playwright.sync_api import BrowserContext, Page
+except ImportError:
+    BrowserContext = Any
+    Page = Any
 from app.utils.logger import setup_logger
 
 logger = setup_logger("linkedin.search")

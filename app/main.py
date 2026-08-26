@@ -29,10 +29,13 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing database schema and runtime storage directories...")
-    init_db()
-    settings.ensure_directories()
-    logger.info("Application startup complete.")
+    try:
+        logger.info("Initializing database schema and runtime storage directories...")
+        init_db()
+        settings.ensure_directories()
+        logger.info("Application startup complete.")
+    except Exception as e:
+        logger.warning(f"Startup initialization note: {e}")
     yield
     logger.info("Application shutdown.")
 

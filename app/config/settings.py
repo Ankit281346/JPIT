@@ -65,7 +65,10 @@ class Settings(BaseSettings):
         ]
         for d in dirs:
             if d:
-                os.makedirs(os.path.join(self.BASE_DIR, d), exist_ok=True)
+                try:
+                    os.makedirs(os.path.join(self.BASE_DIR, d), exist_ok=True)
+                except Exception:
+                    pass
 
 
 @lru_cache()
