@@ -2,7 +2,7 @@ import os
 import json
 from typing import Optional, Dict, Any, Tuple
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build, Resource
 from app.config.settings import get_settings
@@ -150,13 +150,13 @@ class GmailAuth:
         """Generates Google OAuth URL for browser redirect flow and stores flow state for PKCE verifier matching."""
         if os.path.exists(self.credentials_path):
             try:
-                flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, SCOPES, redirect_uri=redirect_uri)
+                flow = Flow.from_client_secrets_file(self.credentials_path, scopes=SCOPES, redirect_uri=redirect_uri)
             except Exception:
                 flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, SCOPES)
                 flow.redirect_uri = redirect_uri
         elif self.settings.GOOGLE_CLIENT_ID and self.settings.GOOGLE_CLIENT_SECRET:
             client_config = {
-                "installed": {
+                "web": {
                     "client_id": self.settings.GOOGLE_CLIENT_ID,
                     "client_secret": self.settings.GOOGLE_CLIENT_SECRET,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -164,7 +164,7 @@ class GmailAuth:
                     "redirect_uris": [redirect_uri],
                 }
             }
-            flow = InstalledAppFlow.from_client_config(client_config, SCOPES, redirect_uri=redirect_uri)
+            flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
         else:
             raise ValueError("No OAuth client credentials configured.")
 
@@ -184,13 +184,13 @@ class GmailAuth:
             flow.redirect_uri = redirect_uri
         elif os.path.exists(self.credentials_path):
             try:
-                flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, SCOPES, redirect_uri=redirect_uri)
+                flow = Flow.from_client_secrets_file(self.credentials_path, scopes=SCOPES, redirect_uri=redirect_uri)
             except Exception:
                 flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, SCOPES)
                 flow.redirect_uri = redirect_uri
         elif self.settings.GOOGLE_CLIENT_ID and self.settings.GOOGLE_CLIENT_SECRET:
             client_config = {
-                "installed": {
+                "web": {
                     "client_id": self.settings.GOOGLE_CLIENT_ID,
                     "client_secret": self.settings.GOOGLE_CLIENT_SECRET,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -198,7 +198,7 @@ class GmailAuth:
                     "redirect_uris": [redirect_uri],
                 }
             }
-            flow = InstalledAppFlow.from_client_config(client_config, SCOPES, redirect_uri=redirect_uri)
+            flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
         else:
             raise ValueError("No OAuth client credentials configured.")
 
