@@ -6,9 +6,11 @@ from app.database.models import Base
 
 settings = get_settings()
 
+db_url = getattr(settings, "database_url_resolved", settings.DATABASE_URL)
+
 # Create SQLite parent folder if needed
-if settings.DATABASE_URL.startswith("sqlite"):
-    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+if db_url.startswith("sqlite"):
+    db_path = db_url.replace("sqlite:///", "")
     if db_path.startswith("./"):
         db_path = os.path.join(settings.BASE_DIR, db_path[2:])
     db_dir = os.path.dirname(db_path)
@@ -16,8 +18,8 @@ if settings.DATABASE_URL.startswith("sqlite"):
         os.makedirs(db_dir, exist_ok=True)
 
 engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {},
+    db_url,
+    connect_args={"check_same_thread": False} if db_url.startswith("sqlite") else {},
     echo=False,
 )
 

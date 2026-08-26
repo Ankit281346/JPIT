@@ -37,13 +37,19 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", description="Logging level: DEBUG, INFO, WARNING, ERROR")
 
     # Directories
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+    BASE_DIR: Path = Path("/tmp") if os.environ.get("VERCEL") else Path(__file__).resolve().parent.parent.parent
     RESUMES_DIR: str = Field(default="data/resumes")
     GENERATED_RESUMES_DIR: str = Field(default="data/generated_resumes")
     JOBS_DIR: str = Field(default="data/jobs")
     SUBMISSIONS_DIR: str = Field(default="data/submissions")
     SCREENSHOTS_DIR: str = Field(default="screenshots")
     EVIDENCE_DIR: str = Field(default="evidence")
+
+    @property
+    def database_url_resolved(self) -> str:
+        if os.environ.get("VERCEL") and "sqlite" in self.DATABASE_URL:
+            return "sqlite:////tmp/api_c2c.db"
+        return self.DATABASE_URL
 
     def ensure_directories(self) -> None:
         """Ensure all required runtime data directories exist."""
