@@ -503,7 +503,16 @@ async def submit_all_jobs(
 
     jobs = repo.get_all_jobs(status="discovered")
     if not jobs:
-        return {"success": True, "message": "No newly discovered jobs to process.", "processed": 0}
+        jobs = [j for j in repo.get_all_jobs() if j.status in ["discovered", "failed", "resume_ready"]]
+
+    if not jobs:
+        return {
+            "success": True,
+            "message": "No new jobs to process. Click 'Discover & Filter LinkedIn C2C Posts' to fetch jobs first.",
+            "processed": 0,
+            "success_count": 0,
+            "results": []
+        }
 
     semaphore = asyncio.Semaphore(5)  # Max 5 concurrent email generations/sends
     pipeline = PipelineService(db)
@@ -511,7 +520,6 @@ async def submit_all_jobs(
     async def process_job_concurrent(job_id: int):
         async with semaphore:
             try:
-                # Use to_thread since process_and_submit_job is synchronous
                 return await asyncio.to_thread(pipeline.process_and_submit_job, candidate.id, job_id)
             except Exception as e:
                 logger.error(f"Failed to process job {job_id}: {e}")
@@ -521,9 +529,17 @@ async def submit_all_jobs(
     results = await asyncio.gather(*tasks)
 
     success_count = sum(1 for r in results if r.get("success"))
+    fail_reasons = [r.get("error") or r.get("message") for r in results if not r.get("success") and (r.get("error") or r.get("message"))]
+    distinct_reason = fail_reasons[0] if fail_reasons else "Unknown issue"
+
+    if success_count > 0:
+        msg = f"Processed {len(jobs)} jobs. Successfully sent {success_count} emails {'via Gmail API' if not settings.DRY_RUN else '(DRY RUN - Safe Mode)'}."
+    else:
+        msg = f"Processed {len(jobs)} jobs. Successful: 0.\n\nReason: {distinct_reason}"
+
     return {
-        "success": True,
-        "message": f"Processed {len(jobs)} jobs. Successful submissions: {success_count}.",
+        "success": success_count > 0,
+        "message": msg,
         "processed": len(jobs),
         "success_count": success_count,
         "results": results
@@ -1086,13 +1102,9 @@ def web_dashboard():
           body: JSON.stringify({ candidate_id: activeCandidateId })
         });
         const data = await res.json();
-        if (data.success) {
-          alert('✅ ' + data.message);
-          loadJobs();
-          loadSubmissions();
-        } else {
-          alert('❌ Error: ' + data.detail);
-        }
+        alert(data.message || (data.success ? '✅ All emails sent!' : '❌ Send failed: ' + (data.detail || 'Unknown error')));
+        loadJobs();
+        loadSubmissions();
       } catch (err) {
         alert('❌ Error: ' + err.message);
       } finally {
