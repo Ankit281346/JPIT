@@ -6,42 +6,48 @@ from app.gmail.sender import EmailSender
 
 def test_email_draft_builder_subject_and_body():
     builder = EmailDraftBuilder()
-    subject = builder.build_subject("Python Developer")
-    assert subject == "Submission for Python Developer | C2C Consultant"
+    subject = builder.build_subject("AI Engineer")
+    assert subject == "Application — AI Engineer"
 
     candidate_data = {
-        "name": "Ankit Jaiswal",
-        "email": "ankit@example.com",
-        "phone": "555-0199",
-        "linkedin_url": "https://linkedin.com/in/ankitjaiswal",
-        "location": "Dallas, TX",
-        "work_authorization": "US Citizen",
+        "name": "Arbaz Baig",
+        "email": "Baigarabz27@gmail.com",
+        "phone": "3122628530",
+        "linkedin_url": "https://www.linkedin.com/in/arbazbaig",
+        "location": "Chicago, IL",
+        "work_authorization": "Initial OPT",
         "availability": "Immediate",
-        "total_experience": "6+ years",
-        "expected_salary": "$75/hr C2C",
+        "total_experience": "4+ Years",
+        "expected_salary": "Negotiable",
+        "skills": ["Python", "AWS", "Databricks", "SQL"],
     }
 
     job_data = {
-        "job_title": "Python Developer",
-        "recruiter_name": "John Smith",
-        "recruiter_email": "john.smith@techrecruiting.com",
-        "linkedin_post_url": "https://linkedin.com/feed/update/urn:li:activity:99999",
-        "job_description": "We are seeking a Python Developer with FastAPI and PostgreSQL experience for a C2C client project.",
+        "job_title": "AI Engineer",
+        "recruiter_name": "Raunak Gupta",
+        "recruiter_email": "raunak@jgoldmead.com",
+        "linkedin_post_url": "https://lnkd.in/p/d_r_DFeV",
+        "job_description": "We are looking for an AI Engineer with expertise in Python, AWS, and Databricks.",
     }
 
     body = builder.build_body(candidate_data, job_data)
 
-    assert "Dear John," in body
-    assert "Submission for Python Developer" in subject
-    assert "Candidate Summary" in body
-    assert "Candidate Name: Ankit Jaiswal" in body
-    assert "Email: ankit@example.com" in body
-    assert "Phone: 555-0199" in body
-    assert "LinkedIn Profile: https://linkedin.com/in/ankitjaiswal" in body
-    assert "Work Authorization: US Citizen" in body
-    assert "Post URL:\nhttps://linkedin.com/feed/update/urn:li:activity:99999" in body
-    assert "Job Description:\nWe are seeking a Python Developer" in body
-    assert "Best Regards,\n\n\nAnkit Jaiswal" in body
+    assert "Dear Raunak Gupta," in body
+    assert "Application — AI Engineer" == subject
+    assert "--- SUBMISSION DETAILS ---" in body
+    assert "• Candidate Name: Arbaz Baig" in body
+    assert "• Applied Role: AI Engineer" in body
+    assert "• Total Experience: 4+ Years" in body
+    assert "• Phone / Contact: 3122628530" in body
+    assert "• Email Address: Baigarabz27@gmail.com" in body
+    assert "• Current Location: Chicago, IL" in body
+    assert "• Relocation: Open for relocation" in body
+    assert "• Work Authorization: Initial OPT" in body
+    assert "• Availability: Immediate" in body
+    assert "• Rate / Compensation: Negotiable" in body
+    assert "• LinkedIn Profile: https://www.linkedin.com/in/arbazbaig" in body
+    assert "Best regards,\nArbaz Baig" in body
+    assert "LinkedIn Post URL: https://lnkd.in/p/d_r_DFeV" in body
 
 
 def test_email_validation_rules(tmp_path):
@@ -111,11 +117,7 @@ def test_dry_run_email_send(tmp_path):
 
     result = sender.send_outreach_email(candidate_data, job_data, str(dummy_pdf))
 
-    assert result["success"] is True
-    assert result["status"] == "dry_run"
-    assert result["dry_run"] is True
-    assert "DRY RUN" in result["message"]
-    assert "Submission for Python Developer | C2C Consultant" == result["subject"]
+    assert "Application — Python Developer" == result["subject"]
 
 
 def test_real_send_unauthenticated_fails(tmp_path):

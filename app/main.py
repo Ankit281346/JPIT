@@ -716,7 +716,7 @@ def web_dashboard():
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold text-primary mb-0"><i class="bi bi-briefcase"></i> 3. Discovered C2C Opportunities</h5>
             <div class="d-flex gap-2">
-              <button class="btn btn-outline-primary btn-sm" id="submitAllBtn"><i class="bi bi-send-fill"></i> Send All Outreach</button>
+              <button class="btn btn-primary fw-bold" id="submitAllBtn"><i class="bi bi-send-fill"></i> 🚀 Send All Outreach</button>
               <button class="btn btn-outline-secondary btn-sm" id="refreshJobsBtn">Refresh Jobs</button>
             </div>
           </div>
@@ -975,7 +975,7 @@ def web_dashboard():
             <td>${j.location || 'Remote'}</td>
             <td>${renderStatusBadge(j.status)}</td>
             <td>
-              <button class="btn btn-sm btn-primary" onclick="processJob(${j.id})"><i class="bi bi-send"></i> Send Outreach</button>
+              <a href="${j.linkedin_post_url}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-link-45deg"></i> Source</a>
             </td>
           </tr>
         `).join('');
