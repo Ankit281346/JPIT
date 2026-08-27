@@ -47,6 +47,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+class VercelPathCorrectionMiddleware:
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            for prefix in ("/api/index.py", "/api/index"):
+                if path.startswith(prefix):
+                    rem = path[len(prefix):]
+                    scope["path"] = rem if (rem and rem.startswith("/")) else ("/" + rem if rem else "/")
+                    break
+            if scope.get("path") == "/api":
+                scope["path"] = "/"
+        await self.app(scope, receive, send)
+
+app.add_middleware(VercelPathCorrectionMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -561,6 +581,9 @@ def reset_system_data(db: Session = Depends(get_db)):
 
 # ------------------- INTERACTIVE WEB DASHBOARD -------------------
 @app.get("/", response_class=HTMLResponse, tags=["Dashboard"])
+@app.get("/api", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/api/index", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/api/index.py", response_class=HTMLResponse, include_in_schema=False)
 def web_dashboard():
     """Interactive visual dashboard for testing and observing the full pipeline."""
     return """<!DOCTYPE html>
