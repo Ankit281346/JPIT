@@ -124,6 +124,14 @@ def get_gmail_status():
     }
 
 
+def _get_redirect_uri(request: Request) -> str:
+    host = request.headers.get("x-forwarded-host") or request.url.netloc
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    if "vercel.app" in host or (not host.startswith("localhost") and not host.startswith("127.0.0.1")):
+        proto = "https"
+    return f"{proto}://{host}/oauth2callback"
+
+
 @app.get("/gmail/auth/url", tags=["Gmail"])
 def get_gmail_auth_url(request: Request):
     """Returns Google OAuth authorization URL for browser redirect."""
@@ -133,9 +141,7 @@ def get_gmail_auth_url(request: Request):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No OAuth credentials found. Please place 'credentials.json' in the project root or configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.",
         )
-    # Determine callback URL dynamically from request host
-    base_url = str(request.base_url).rstrip("/")
-    redirect_uri = f"{base_url}/oauth2callback"
+    redirect_uri = _get_redirect_uri(request)
     try:
         auth_url, state = auth.get_authorization_url(redirect_uri)
         return {"auth_url": auth_url, "redirect_uri": redirect_uri, "state": state}
@@ -166,7 +172,7 @@ def oauth2callback(request: Request, code: Optional[str] = None, state: Optional
         </body></html>
         """)
 
-    redirect_uri = str(request.url).split("?")[0]
+    redirect_uri = _get_redirect_uri(request)
     auth = GmailAuth()
     try:
         auth.fetch_token_from_code(code=code, redirect_uri=redirect_uri, state=state)
