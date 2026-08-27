@@ -810,31 +810,45 @@ def web_dashboard():
     async function checkGmailStatus() {
       try {
         const res = await fetch('/gmail/status');
+        if (!res.ok) throw new Error('Status HTTP ' + res.status);
         const data = await res.json();
-        isDryRunMode = data.dry_run;
-        isGmailAuthed = data.authenticated;
+        isDryRunMode = Boolean(data.dry_run);
+        isGmailAuthed = Boolean(data.authenticated);
 
         const modeBadge = isDryRunMode 
           ? '<span class="badge bg-warning text-dark" onclick="toggleDryRun()" style="cursor:pointer;" title="Click to switch to Live Sending Mode"><i class="bi bi-shield-lock"></i> Mode: DRY RUN (Click to Switch to Live)</span>'
           : '<span class="badge bg-success text-white" onclick="toggleDryRun()" style="cursor:pointer;" title="Click to switch to Safe Mode"><i class="bi bi-send-fill"></i> Mode: LIVE SENDING (Active)</span>';
-        document.getElementById('modeStatus').innerHTML = modeBadge;
+        
+        const modeElem = document.getElementById('modeStatus');
+        if (modeElem) modeElem.innerHTML = modeBadge;
 
+        const gmailStatusElem = document.getElementById('gmailStatusText');
         const authBtn = document.getElementById('authGmailBtn');
         if (data.authenticated && data.email) {
-          document.getElementById('gmailStatusText').innerHTML = `🟢 Gmail: <strong>${data.email}</strong>`;
-          authBtn.innerText = 'Re-Authenticate';
-          authBtn.className = 'btn btn-sm btn-outline-light ms-2';
+          if (gmailStatusElem) gmailStatusElem.innerHTML = `🟢 Gmail: <strong>${data.email}</strong>`;
+          if (authBtn) {
+            authBtn.innerText = 'Re-Authenticate';
+            authBtn.className = 'btn btn-sm btn-outline-light ms-2';
+          }
         } else if (data.authenticated) {
-          document.getElementById('gmailStatusText').innerHTML = '🟢 Gmail: <strong>Connected</strong>';
-          authBtn.innerText = 'Re-Authenticate';
-          authBtn.className = 'btn btn-sm btn-outline-light ms-2';
+          if (gmailStatusElem) gmailStatusElem.innerHTML = '🟢 Gmail: <strong>Connected</strong>';
+          if (authBtn) {
+            authBtn.innerText = 'Re-Authenticate';
+            authBtn.className = 'btn btn-sm btn-outline-light ms-2';
+          }
         } else {
-          document.getElementById('gmailStatusText').innerHTML = '🔴 Gmail: <strong>Not Connected</strong>';
-          authBtn.innerHTML = '<i class="bi bi-google"></i> Connect Gmail';
-          authBtn.className = 'btn btn-sm btn-light fw-bold ms-2';
+          if (gmailStatusElem) gmailStatusElem.innerHTML = '🔴 Gmail: <strong>Not Connected</strong>';
+          if (authBtn) {
+            authBtn.innerHTML = '<i class="bi bi-google"></i> Connect Gmail';
+            authBtn.className = 'btn btn-sm btn-light fw-bold ms-2';
+          }
         }
       } catch (e) {
         console.error('Failed to load Gmail status:', e);
+        const modeElem = document.getElementById('modeStatus');
+        if (modeElem) modeElem.innerHTML = '<span class="badge bg-warning text-dark" onclick="toggleDryRun()" style="cursor:pointer;"><i class="bi bi-shield-lock"></i> Mode: DRY RUN</span>';
+        const gmailStatusElem = document.getElementById('gmailStatusText');
+        if (gmailStatusElem) gmailStatusElem.innerHTML = '🔴 Gmail: <strong>Not Connected</strong>';
       }
     }
 
@@ -1114,6 +1128,12 @@ def web_dashboard():
     });
     
     // Initialize dashboard data
+    window.addEventListener('DOMContentLoaded', () => {
+      checkGmailStatus();
+      loadJobs();
+      loadSubmissions();
+    });
+    // Fallback immediate call
     checkGmailStatus();
     loadJobs();
     loadSubmissions();
