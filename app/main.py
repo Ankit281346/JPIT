@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
-from app.database.database import get_db, init_db
+from app.database.database import get_db, init_db, SessionLocal
 from app.database.repository import Repository
 from app.database.models import Candidate, Job, Submission
 from app.services.pipeline import PipelineService
@@ -515,12 +515,19 @@ async def submit_all_jobs(
         }
 
     semaphore = asyncio.Semaphore(5)  # Max 5 concurrent email generations/sends
-    pipeline = PipelineService(db)
 
     async def process_job_concurrent(job_id: int):
         async with semaphore:
+            def _run():
+                worker_db = SessionLocal()
+                try:
+                    worker_pipeline = PipelineService(worker_db)
+                    return worker_pipeline.process_and_submit_job(candidate_id=candidate.id, job_id=job_id)
+                finally:
+                    worker_db.close()
+
             try:
-                return await asyncio.to_thread(pipeline.process_and_submit_job, candidate.id, job_id)
+                return await asyncio.to_thread(_run)
             except Exception as e:
                 logger.error(f"Failed to process job {job_id}: {e}")
                 return {"success": False, "job_id": job_id, "error": str(e)}
