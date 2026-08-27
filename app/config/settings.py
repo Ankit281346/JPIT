@@ -54,15 +54,61 @@ class Settings(BaseSettings):
             return v.strip().lower() in ("true", "1", "t", "yes", "y")
         return bool(v)
 
-    @field_validator("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", mode="before")
+    @field_validator(
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        mode="before",
+    )
     @classmethod
     def parse_empty_strings(cls, v):
         if isinstance(v, str) and not v.strip():
             return None
         return v
 
+    @field_validator("AI_PROVIDER", mode="before")
+    @classmethod
+    def parse_ai_provider(cls, v):
+        if not v or (isinstance(v, str) and not v.strip()):
+            return "gemini"
+        return v
+
+    @field_validator("LOG_LEVEL", mode="before")
+    @classmethod
+    def parse_log_level(cls, v):
+        if not v or (isinstance(v, str) and not v.strip()):
+            return "INFO"
+        return v
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def parse_database_url(cls, v):
+        if not v or (isinstance(v, str) and not v.strip()):
+            return "sqlite:///./data/api_c2c.db"
+        return v
+
+    @field_validator(
+        "LINKEDIN_SESSION_PATH",
+        "GMAIL_TOKEN_PATH",
+        "GMAIL_CREDENTIALS_PATH",
+        "RESUMES_DIR",
+        "GENERATED_RESUMES_DIR",
+        "JOBS_DIR",
+        "SUBMISSIONS_DIR",
+        "SCREENSHOTS_DIR",
+        "EVIDENCE_DIR",
+        mode="before",
+    )
+    @classmethod
+    def parse_path_defaults(cls, v, info):
+        if not v or (isinstance(v, str) and not v.strip()):
+            return cls.model_fields[info.field_name].default
+        return v
+
     # Directories
-    BASE_DIR: Path = Path("/tmp") if os.environ.get("VERCEL") else Path(__file__).resolve().parent.parent.parent
+    BASE_DIR: Path = Path("/tmp") if (os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")) else Path(__file__).resolve().parent.parent.parent
     RESUMES_DIR: str = Field(default="data/resumes")
     GENERATED_RESUMES_DIR: str = Field(default="data/generated_resumes")
     JOBS_DIR: str = Field(default="data/jobs")
@@ -72,7 +118,7 @@ class Settings(BaseSettings):
 
     @property
     def database_url_resolved(self) -> str:
-        if os.environ.get("VERCEL") and "sqlite" in self.DATABASE_URL:
+        if (os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")) and "sqlite" in self.DATABASE_URL:
             return "sqlite:////tmp/api_c2c.db"
         return self.DATABASE_URL
 

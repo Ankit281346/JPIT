@@ -26,7 +26,10 @@ class GmailAuth:
         self.settings = get_settings()
         self.token_path = os.path.join(self.settings.BASE_DIR, self.settings.GMAIL_TOKEN_PATH)
         self.credentials_path = os.path.join(self.settings.BASE_DIR, self.settings.GMAIL_CREDENTIALS_PATH)
-        os.makedirs(os.path.dirname(self.token_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(self.token_path), exist_ok=True)
+        except Exception:
+            pass
 
     def has_credentials_config(self) -> bool:
         """Checks if GCP OAuth client configuration is provided via file or environment variables."""
@@ -38,8 +41,12 @@ class GmailAuth:
 
     def is_authenticated(self) -> bool:
         """Returns True if a valid or successfully refreshed OAuth credential exists."""
-        creds = self.get_credentials(interactive=False)
-        return creds is not None and creds.valid
+        try:
+            creds = self.get_credentials(interactive=False)
+            return creds is not None and creds.valid
+        except Exception as e:
+            logger.warning(f"Error checking Gmail authentication status: {e}")
+            return False
 
     def get_user_email(self) -> Optional[str]:
         """Retrieves the authenticated Gmail user's email address."""

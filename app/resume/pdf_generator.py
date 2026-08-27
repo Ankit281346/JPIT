@@ -37,7 +37,10 @@ class ResumePDFGenerator:
         self.output_dir = output_dir or os.path.join(
             self.settings.BASE_DIR, self.settings.GENERATED_RESUMES_DIR
         )
-        os.makedirs(self.output_dir, exist_ok=True)
+        try:
+            os.makedirs(self.output_dir, exist_ok=True)
+        except Exception:
+            pass
 
     def generate_filename(self, candidate_name: str, company_name: str, job_title: str) -> str:
         """Generates sanitized filename: CandidateName_Company_JobTitle.pdf"""

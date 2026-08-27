@@ -20,7 +20,10 @@ class LinkedInAuth:
         self.session_path = session_path or os.path.join(
             self.settings.BASE_DIR, self.settings.LINKEDIN_SESSION_PATH
         )
-        os.makedirs(os.path.dirname(self.session_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(self.session_path), exist_ok=True)
+        except Exception:
+            pass
 
     def has_saved_session(self) -> bool:
         """Check if a session storage file already exists."""
