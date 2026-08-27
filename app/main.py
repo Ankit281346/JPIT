@@ -127,7 +127,13 @@ def get_gmail_status():
 def _get_redirect_uri(request: Request) -> str:
     host = request.headers.get("x-forwarded-host") or request.url.netloc
     proto = request.headers.get("x-forwarded-proto") or request.url.scheme
-    if "vercel.app" in host or (not host.startswith("localhost") and not host.startswith("127.0.0.1")):
+    
+    # If on any Vercel deployment (*.vercel.app), use the fixed production domain
+    # so Google Cloud Console only needs one registered URI: https://jpit.vercel.app/oauth2callback
+    if host.endswith(".vercel.app"):
+        return "https://jpit.vercel.app/oauth2callback"
+
+    if not host.startswith("localhost") and not host.startswith("127.0.0.1"):
         proto = "https"
     return f"{proto}://{host}/oauth2callback"
 
