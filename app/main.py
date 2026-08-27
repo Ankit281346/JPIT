@@ -124,6 +124,14 @@ def get_gmail_status():
     }
 
 
+@app.post("/gmail/toggle-dry-run", tags=["Gmail"])
+def toggle_dry_run():
+    """Toggles between Safe Mode (DRY RUN) and Live Sending Mode."""
+    settings.DRY_RUN = not settings.DRY_RUN
+    mode = "Safe Mode (DRY RUN)" if settings.DRY_RUN else "Live Sending Mode"
+    return {"success": True, "dry_run": settings.DRY_RUN, "mode": mode}
+
+
 def _get_redirect_uri(request: Request) -> str:
     host = request.headers.get("x-forwarded-host") or request.url.netloc
     proto = request.headers.get("x-forwarded-proto") or request.url.scheme
@@ -791,8 +799,8 @@ def web_dashboard():
         isGmailAuthed = data.authenticated;
 
         const modeBadge = isDryRunMode 
-          ? '<span class="badge bg-warning text-dark"><i class="bi bi-shield-lock"></i> DRY_RUN=true (Safe Mode)</span>'
-          : '<span class="badge bg-success text-white"><i class="bi bi-send-fill"></i> DRY_RUN=false (LIVE SENDING)</span>';
+          ? '<span class="badge bg-warning text-dark" onclick="toggleDryRun()" style="cursor:pointer;" title="Click to switch to Live Sending Mode"><i class="bi bi-shield-lock"></i> Mode: DRY RUN (Click to Switch to Live)</span>'
+          : '<span class="badge bg-success text-white" onclick="toggleDryRun()" style="cursor:pointer;" title="Click to switch to Safe Mode"><i class="bi bi-send-fill"></i> Mode: LIVE SENDING (Active)</span>';
         document.getElementById('modeStatus').innerHTML = modeBadge;
 
         const authBtn = document.getElementById('authGmailBtn');
@@ -811,6 +819,17 @@ def web_dashboard():
         }
       } catch (e) {
         console.error('Failed to load Gmail status:', e);
+      }
+    }
+
+    async function toggleDryRun() {
+      try {
+        const res = await fetch('/gmail/toggle-dry-run', { method: 'POST' });
+        const data = await res.json();
+        alert('Switched to: ' + data.mode + (data.dry_run ? '\n(Emails will be validated & drafted without sending)' : '\n(Live sending enabled: emails will be delivered directly from your connected Gmail)'));
+        checkGmailStatus();
+      } catch (err) {
+        alert('Could not toggle mode: ' + err.message);
       }
     }
 
