@@ -856,7 +856,7 @@ def web_dashboard():
       try {
         const res = await fetch('/gmail/toggle-dry-run', { method: 'POST' });
         const data = await res.json();
-        alert('Switched to: ' + data.mode + (data.dry_run ? '\n(Emails will be validated & drafted without sending)' : '\n(Live sending enabled: emails will be delivered directly from your connected Gmail)'));
+        alert('Switched to: ' + data.mode + (data.dry_run ? '\\n(Emails will be validated & drafted without sending)' : '\\n(Live sending enabled: emails will be delivered directly from your connected Gmail)'));
         checkGmailStatus();
       } catch (err) {
         alert('Could not toggle mode: ' + err.message);
@@ -926,7 +926,7 @@ def web_dashboard():
           document.getElementById('candQuery').innerText = data.data.search_query;
           document.getElementById('searchQueryInput').value = data.data.search_query;
           document.getElementById('candidateInfo').classList.remove('d-none');
-          alert('✅ Resume parsed successfully!\n\nCandidate: ' + data.data.candidate_name + '\nTarget Role: ' + data.data.primary_job_title);
+          alert('✅ Resume parsed successfully!\\n\\nCandidate: ' + data.data.candidate_name + '\\nTarget Role: ' + data.data.primary_job_title);
         } else {
           alert('Upload failed: ' + (data.detail || 'Could not parse resume'));
         }

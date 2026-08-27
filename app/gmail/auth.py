@@ -84,6 +84,11 @@ class GmailAuth:
                 return creds
             except Exception as e:
                 logger.warning(f"Token refresh failed: {e}. Need re-authentication.")
+                try:
+                    if os.path.exists(self.token_path):
+                        os.remove(self.token_path)
+                except Exception:
+                    pass
                 creds = None
 
         # 3. If valid, return
