@@ -866,32 +866,24 @@ def web_dashboard():
     async function connectGmail() {
       const btn = document.getElementById('authGmailBtn');
       const originalText = btn.innerHTML;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Opening Google Login...';
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Redirecting to Google...';
       btn.disabled = true;
 
       try {
         const res = await fetch('/gmail/auth/url');
         const data = await res.json();
         if (res.ok && data.auth_url) {
-          // Direct browser navigation to Google sign-in
-          window.location.href = data.auth_url;
+          window.location.assign(data.auth_url);
           return;
-        }
-        
-        // Fallback to local server flow if URL generator cannot be used
-        const resFallback = await fetch('/gmail/auth/login', { method: 'POST' });
-        const dataFallback = await resFallback.json();
-        if (resFallback.ok && dataFallback.success) {
-          alert('✅ ' + dataFallback.message);
         } else {
-          alert('❌ Authentication failed: ' + (dataFallback.detail || data.detail || 'Could not authenticate. Check credentials.json or .env.'));
+          alert('Could not generate Google login URL: ' + (data.detail || 'Unknown error'));
+          btn.innerHTML = originalText;
+          btn.disabled = false;
         }
       } catch (err) {
         alert('❌ Error: ' + err.message);
-      } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
-        checkGmailStatus();
       }
     }
 
@@ -912,7 +904,10 @@ def web_dashboard():
     document.getElementById('uploadForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const fileInput = document.getElementById('resumeFile');
-      if (!fileInput.files[0]) return;
+      if (!fileInput.files[0]) {
+        alert('Please select a PDF resume file first.');
+        return;
+      }
 
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
@@ -931,8 +926,9 @@ def web_dashboard():
           document.getElementById('candQuery').innerText = data.data.search_query;
           document.getElementById('searchQueryInput').value = data.data.search_query;
           document.getElementById('candidateInfo').classList.remove('d-none');
+          alert('✅ Resume parsed successfully!\n\nCandidate: ' + data.data.candidate_name + '\nTarget Role: ' + data.data.primary_job_title);
         } else {
-          alert('Upload failed: ' + data.detail);
+          alert('Upload failed: ' + (data.detail || 'Could not parse resume'));
         }
       } catch (err) {
         alert('Error: ' + err.message);
