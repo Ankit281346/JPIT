@@ -932,21 +932,28 @@ def web_dashboard():
 
     document.getElementById('searchBtn').addEventListener('click', async () => {
       const btn = document.getElementById('searchBtn');
-      btn.innerText = 'Searching & Filtering...';
+      const query = document.getElementById('searchQueryInput').value.trim();
+
+      if (query) {
+        // Open live LinkedIn 24h posts in a new tab
+        const linkedInUrl = 'https://www.linkedin.com/search/results/content/?keywords=' + encodeURIComponent(query) + '&sortBy=%22date_posted%22&f_TPR=r86400';
+        window.open(linkedInUrl, '_blank');
+      }
+
+      btn.innerText = 'Discovering & Filtering...';
       btn.disabled = true;
 
-      const query = document.getElementById('searchQueryInput').value;
       try {
         const res = await fetch('/linkedin/search', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ query: query, candidate_id: activeCandidateId, max_results: 10 })
+          body: JSON.stringify({ query: query, candidate_id: activeCandidateId, max_results: 15 })
         });
         const data = await res.json();
         if (data.success) {
           const s = data.summary;
           const sumBox = document.getElementById('searchSummary');
-          sumBox.innerHTML = `Discovered: <strong>${s.total_discovered}</strong> | Passed C2C Filters: <strong>${s.passed_filters}</strong> | Filtered Out: <strong>${s.filtered_out}</strong> | Duplicates Skipped: <strong>${s.duplicates_skipped}</strong>`;
+          sumBox.innerHTML = `Discovered: <strong>${s.total_discovered}</strong> | Passed C2C Filters (24h): <strong>${s.passed_filters}</strong> | Filtered Out: <strong>${s.filtered_out}</strong> | Duplicates Skipped: <strong>${s.duplicates_skipped}</strong>`;
           sumBox.classList.remove('d-none');
           loadJobs();
         } else {
