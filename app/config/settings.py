@@ -3,7 +3,7 @@ from pathlib import Path
 from functools import lru_cache
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -35,6 +35,31 @@ class Settings(BaseSettings):
     # Pipeline & Safety
     DRY_RUN: bool = Field(default=True, description="When true, emails are drafted and validated but not actually sent")
     LOG_LEVEL: str = Field(default="INFO", description="Logging level: DEBUG, INFO, WARNING, ERROR")
+
+    @field_validator("LINKEDIN_HEADLESS", mode="before")
+    @classmethod
+    def parse_linkedin_headless(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return False
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "1", "t", "yes", "y")
+        return bool(v)
+
+    @field_validator("DRY_RUN", mode="before")
+    @classmethod
+    def parse_dry_run(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return True
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "1", "t", "yes", "y")
+        return bool(v)
+
+    @field_validator("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", mode="before")
+    @classmethod
+    def parse_empty_strings(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
     # Directories
     BASE_DIR: Path = Path("/tmp") if os.environ.get("VERCEL") else Path(__file__).resolve().parent.parent.parent
