@@ -4,7 +4,7 @@ import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, List
 from app.config.settings import get_settings
 from app.gmail.auth import GmailAuth
 from app.gmail.drafts import EmailDraftBuilder
@@ -67,12 +67,24 @@ class EmailSender:
         body: str,
         pdf_path: str,
         sender_email: str = "me",
+        cc_emails: Optional[List[str]] = None,
+        bcc_emails: Optional[List[str]] = None,
     ) -> MIMEMultipart:
-        """Constructs a standard MIME multipart email message with PDF attachment."""
+        """Constructs a standard MIME multipart email message with PDF attachment, CC, and BCC."""
         msg = MIMEMultipart()
         msg["To"] = to_email
         msg["From"] = sender_email
         msg["Subject"] = subject
+
+        if cc_emails:
+            clean_cc = [e.strip() for e in cc_emails if e and e.strip()]
+            if clean_cc:
+                msg["Cc"] = ", ".join(clean_cc)
+
+        if bcc_emails:
+            clean_bcc = [e.strip() for e in bcc_emails if e and e.strip()]
+            if clean_bcc:
+                msg["Bcc"] = ", ".join(clean_bcc)
 
         # Attach text body
         msg.attach(MIMEText(body, "plain", "utf-8"))
@@ -96,7 +108,7 @@ class EmailSender:
         job_data: Dict[str, Any],
         pdf_path: str,
     ) -> Dict[str, Any]:
-        """Validates, constructs, and sends (or dry-run logs) outreach email."""
+        """Validates, constructs, and sends (or dry-run logs) outreach email with required CC/BCC."""
         recruiter_email = job_data.get("recruiter_email", "").strip()
         job_title = job_data.get("job_title", "Software Developer")
         cand_name = candidate_data.get("name", "Candidate")
@@ -122,20 +134,45 @@ class EmailSender:
                 "recruiter_email": recruiter_email,
             }
 
-        # 2. Build email content
+        # 2. Build email content & recipient routing (CC & BCC)
         subject = self.draft_builder.build_subject(job_title)
         body = self.draft_builder.build_body(candidate_data, job_data)
+
+        # CC routing: candidate email + mandatory quinn@jpitstaffing.com
+        cc_list: List[str] = []
+        cand_email = candidate_data.get("email")
+        if cand_email and isinstance(cand_email, str) and cand_email.strip() and EMAIL_FORMAT_REGEX.match(cand_email.strip()):
+            cc_list.append(cand_email.strip())
+
+        agency_cc = "quinn@jpitstaffing.com"
+        if agency_cc not in cc_list:
+            cc_list.append(agency_cc)
+
+        # BCC routing: mandatory kim@jpitstaffing.com
+        bcc_list: List[str] = ["kim@jpitstaffing.com"]
+
         mime_msg = self.build_mime_message(
             to_email=recruiter_email,
             subject=subject,
             body=body,
             pdf_path=pdf_path,
+            cc_emails=cc_list,
+            bcc_emails=bcc_list,
         )
 
         # 3. Dry Run Check
         if self.settings.DRY_RUN:
             logger.info("[DRY_RUN=True] Safe Mode Active: Email validated, drafted and logged without sending.")
-            logger.info(f"--- [DRY_RUN EMAIL PREVIEW] ---\nTo: {recruiter_email}\nSubject: {subject}\nAttachment: {pdf_path}\n\n{body}\n-------------------------------")
+            logger.info(
+                f"--- [DRY_RUN EMAIL PREVIEW] ---\n"
+                f"To: {recruiter_email}\n"
+                f"Cc: {', '.join(cc_list)}\n"
+                f"Bcc: {', '.join(bcc_list)}\n"
+                f"Subject: {subject}\n"
+                f"Attachment: {pdf_path}\n\n"
+                f"{body}\n"
+                f"-------------------------------"
+            )
             return {
                 "success": True,
                 "status": "dry_run",
@@ -145,6 +182,8 @@ class EmailSender:
                 "subject": subject,
                 "body": body,
                 "recruiter_email": recruiter_email,
+                "cc": cc_list,
+                "bcc": bcc_list,
                 "pdf_path": pdf_path,
             }
 
@@ -185,6 +224,8 @@ class EmailSender:
                 "subject": subject,
                 "body": body,
                 "recruiter_email": recruiter_email,
+                "cc": cc_list,
+                "bcc": bcc_list,
                 "pdf_path": pdf_path,
             }
         except Exception as e:

@@ -118,6 +118,23 @@ def test_dry_run_email_send(tmp_path):
     result = sender.send_outreach_email(candidate_data, job_data, str(dummy_pdf))
 
     assert "Application — Python Developer" == result["subject"]
+    assert "ankit@example.com" in result["cc"]
+    assert "quinn@jpitstaffing.com" in result["cc"]
+    assert "kim@jpitstaffing.com" in result["bcc"]
+
+    # Verify MIME headers
+    mime_msg = sender.build_mime_message(
+        to_email=job_data["recruiter_email"],
+        subject=result["subject"],
+        body=result["body"],
+        pdf_path=str(dummy_pdf),
+        cc_emails=result["cc"],
+        bcc_emails=result["bcc"],
+    )
+    assert mime_msg["To"] == "recruiter@hiringagency.com"
+    assert "quinn@jpitstaffing.com" in mime_msg["Cc"]
+    assert "ankit@example.com" in mime_msg["Cc"]
+    assert mime_msg["Bcc"] == "kim@jpitstaffing.com"
 
 
 def test_real_send_unauthenticated_fails(tmp_path):
