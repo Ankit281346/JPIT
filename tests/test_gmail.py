@@ -7,7 +7,7 @@ from app.gmail.sender import EmailSender
 def test_email_draft_builder_subject_and_body():
     builder = EmailDraftBuilder()
     subject = builder.build_subject("AI Engineer")
-    assert subject == "Application — AI Engineer"
+    assert subject == "Submission : AI Engineer - Open for relocation"
 
     candidate_data = {
         "name": "Arbaz Baig",
@@ -33,7 +33,7 @@ def test_email_draft_builder_subject_and_body():
     body = builder.build_body(candidate_data, job_data)
 
     assert "Dear Raunak Gupta," in body
-    assert "Application — AI Engineer" == subject
+    assert "Submission : AI Engineer - Open for relocation" == subject
     assert "--- SUBMISSION DETAILS ---" in body
     assert "• Candidate Name: Arbaz Baig" in body
     assert "• Applied Role: AI Engineer" in body
@@ -117,10 +117,12 @@ def test_dry_run_email_send(tmp_path):
 
     result = sender.send_outreach_email(candidate_data, job_data, str(dummy_pdf))
 
-    assert "Application — Python Developer" == result["subject"]
+    assert "Submission : Python Developer - Open for relocation" == result["subject"]
     assert "ankit@example.com" in result["cc"]
     assert "quinn@jpitstaffing.com" in result["cc"]
     assert "kim@jpitstaffing.com" in result["bcc"]
+    assert result["resume_filename"].startswith("Ankit_Jaiswal_Resume_")
+    assert result["resume_filename"].endswith(".pdf")
 
     # Verify MIME headers
     mime_msg = sender.build_mime_message(
@@ -130,6 +132,7 @@ def test_dry_run_email_send(tmp_path):
         pdf_path=str(dummy_pdf),
         cc_emails=result["cc"],
         bcc_emails=result["bcc"],
+        attachment_filename=result["resume_filename"],
     )
     assert mime_msg["To"] == "recruiter@hiringagency.com"
     assert "quinn@jpitstaffing.com" in mime_msg["Cc"]

@@ -1,5 +1,6 @@
 import os
 import re
+import random
 import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -33,7 +34,7 @@ class EmailSender:
         if not recruiter_email or not recruiter_email.strip():
             return False, "Recruiter email is missing or empty"
 
-        cleaned_email = recruiter_email.strip()
+        cleaned_email = recruiter_email.strip().rstrip(".,;:!?)>\"'")
         if not EMAIL_FORMAT_REGEX.match(cleaned_email):
             return False, f"Invalid recruiter email format: {cleaned_email}"
 
@@ -69,6 +70,7 @@ class EmailSender:
         sender_email: str = "me",
         cc_emails: Optional[List[str]] = None,
         bcc_emails: Optional[List[str]] = None,
+        attachment_filename: Optional[str] = None,
     ) -> MIMEMultipart:
         """Constructs a standard MIME multipart email message with PDF attachment, CC, and BCC."""
         msg = MIMEMultipart()
@@ -89,8 +91,8 @@ class EmailSender:
         # Attach text body
         msg.attach(MIMEText(body, "plain", "utf-8"))
 
-        # Attach PDF
-        filename = os.path.basename(pdf_path)
+        # Attach PDF with randomized anti-spam filename
+        filename = attachment_filename or os.path.basename(pdf_path)
         with open(pdf_path, "rb") as f:
             pdf_attachment = MIMEApplication(f.read(), _subtype="pdf")
             pdf_attachment.add_header(
@@ -151,6 +153,12 @@ class EmailSender:
         # BCC routing: mandatory kim@jpitstaffing.com
         bcc_list: List[str] = ["kim@jpitstaffing.com"]
 
+        # Anti-spam randomized attachment filename: <Candidate_Name>_Resume_<4digit>.pdf
+        cand_name_for_file = re.sub(r"[^\w\s-]", "", cand_name or "Candidate").strip()
+        cand_name_for_file = re.sub(r"[\s-]+", "_", cand_name_for_file) or "Candidate"
+        rand_suffix = random.randint(1000, 9999)
+        unique_attachment_filename = f"{cand_name_for_file}_Resume_{rand_suffix}.pdf"
+
         mime_msg = self.build_mime_message(
             to_email=recruiter_email,
             subject=subject,
@@ -158,6 +166,7 @@ class EmailSender:
             pdf_path=pdf_path,
             cc_emails=cc_list,
             bcc_emails=bcc_list,
+            attachment_filename=unique_attachment_filename,
         )
 
         # 3. Dry Run Check
@@ -169,7 +178,7 @@ class EmailSender:
                 f"Cc: {', '.join(cc_list)}\n"
                 f"Bcc: {', '.join(bcc_list)}\n"
                 f"Subject: {subject}\n"
-                f"Attachment: {pdf_path}\n\n"
+                f"Attachment: {pdf_path} (filename: {unique_attachment_filename})\n\n"
                 f"{body}\n"
                 f"-------------------------------"
             )
@@ -185,6 +194,7 @@ class EmailSender:
                 "cc": cc_list,
                 "bcc": bcc_list,
                 "pdf_path": pdf_path,
+                "resume_filename": unique_attachment_filename,
             }
 
         # 4. Actual Gmail API sending (when DRY_RUN=false)
@@ -202,6 +212,7 @@ class EmailSender:
                     "subject": subject,
                     "body": body,
                     "recruiter_email": recruiter_email,
+                    "resume_filename": unique_attachment_filename,
                 }
 
             service = self.auth.get_service()
@@ -215,7 +226,7 @@ class EmailSender:
             ).execute()
 
             msg_id = send_response.get("id", "sent_unknown_id")
-            logger.info(f"Gmail email sent successfully to {recruiter_email}! Message ID: {msg_id}")
+            logger.info(f"Gmail email sent successfully to {recruiter_email}! (Attachment: {unique_attachment_filename}, Message ID: {msg_id})")
             return {
                 "success": True,
                 "status": "sent",
@@ -227,6 +238,7 @@ class EmailSender:
                 "cc": cc_list,
                 "bcc": bcc_list,
                 "pdf_path": pdf_path,
+                "resume_filename": unique_attachment_filename,
             }
         except Exception as e:
             logger.error(f"Failed to send email via Gmail API: {e}")

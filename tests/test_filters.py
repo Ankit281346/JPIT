@@ -72,14 +72,14 @@ def test_filters_reject_missing_recruiter_email():
     assert "email" in reason.lower()
 
 
-def test_filters_reject_older_than_24_hours():
+def test_filters_accept_older_posts_for_mass_mailing():
     filter_service = PostFilter()
     old_post = {
         "job_title": "Python Developer",
         "recruiter_email": "john@example.com",
         "posted_at": "5d",
-        "raw_post_text": "C2C opening for Python developer. Email john@example.com",
+        "raw_post_text": "We are hiring for an urgent C2C contract role: Python Developer. Location: Remote. Send resume: john@example.com",
     }
     is_valid, reason = filter_service.validate_post(old_post)
-    assert is_valid is False
-    assert "24 hours" in reason.lower()
+    assert is_valid is True
+    assert reason is None

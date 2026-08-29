@@ -80,7 +80,7 @@ app.add_middleware(
 class SearchRequest(BaseModel):
     query: Optional[str] = Field(default=None, description="Custom LinkedIn search query. If omitted, uses latest candidate's primary job title query.")
     candidate_id: Optional[int] = Field(default=None, description="Candidate ID to associate with search")
-    max_results: int = Field(default=15, description="Maximum number of posts to fetch")
+    max_results: int = Field(default=80, description="Maximum number of posts to fetch")
     mock_posts: Optional[List[Dict[str, Any]]] = Field(default=None, description="Optional raw posts list for offline testing")
 
 
@@ -503,37 +503,42 @@ async def submit_all_jobs(
 
     jobs = repo.get_all_jobs(status="discovered")
     if not jobs:
-        jobs = [j for j in repo.get_all_jobs() if j.status in ["discovered", "failed", "resume_ready"]]
+        candidate_jobs = [j for j in repo.get_all_jobs() if j.status in ["discovered", "failed", "resume_ready"]]
+        jobs = [j for j in candidate_jobs if j.recruiter_email and "@" in j.recruiter_email and "." in j.recruiter_email and len(j.recruiter_email.strip()) > 5]
 
     if not jobs:
         return {
             "success": True,
-            "message": "No new jobs to process. Click 'Discover & Filter LinkedIn C2C Posts' to fetch jobs first.",
+            "message": "All discovered jobs have already been successfully processed and sent! Click 'Discover & Filter LinkedIn C2C Posts' or '+ Paste Post Text' to add new jobs.",
             "processed": 0,
             "success_count": 0,
             "results": []
         }
 
-    semaphore = asyncio.Semaphore(5)  # Max 5 concurrent email generations/sends
-
-    async def process_job_concurrent(job_id: int):
-        async with semaphore:
-            def _run():
-                worker_db = SessionLocal()
-                try:
-                    worker_pipeline = PipelineService(worker_db)
-                    return worker_pipeline.process_and_submit_job(candidate_id=candidate.id, job_id=job_id)
-                finally:
-                    worker_db.close()
-
+    results = []
+    total_jobs = len(jobs)
+    for idx, job in enumerate(jobs):
+        def _run():
+            worker_db = SessionLocal()
             try:
-                return await asyncio.to_thread(_run)
-            except Exception as e:
-                logger.error(f"Failed to process job {job_id}: {e}")
-                return {"success": False, "job_id": job_id, "error": str(e)}
+                worker_pipeline = PipelineService(worker_db)
+                return worker_pipeline.process_and_submit_job(candidate_id=candidate.id, job_id=job.id)
+            finally:
+                worker_db.close()
 
-    tasks = [process_job_concurrent(job.id) for job in jobs]
-    results = await asyncio.gather(*tasks)
+        try:
+            res = await asyncio.to_thread(_run)
+            results.append(res)
+            logger.info(f"Outreach [{idx + 1}/{total_jobs}] sent to {job.recruiter_email} for '{job.job_title}'")
+        except Exception as e:
+            logger.error(f"Failed to process job {job.id}: {e}")
+            results.append({"success": False, "job_id": job.id, "error": str(e)})
+
+        # Anti-spam rate limiting: send strictly 1 email every 60 seconds in Live mode
+        if idx < total_jobs - 1:
+            delay = 60 if not settings.DRY_RUN else 1
+            logger.info(f"Rate Limiter: Waiting {delay}s before next email ({idx + 1}/{total_jobs} completed)...")
+            await asyncio.sleep(delay)
 
     success_count = sum(1 for r in results if r.get("success"))
     fail_reasons = [r.get("error") or r.get("message") for r in results if not r.get("success") and (r.get("error") or r.get("message"))]
@@ -987,8 +992,8 @@ def web_dashboard():
       const query = document.getElementById('searchQueryInput').value.trim();
 
       if (query) {
-        // Open live LinkedIn 24h posts in a new tab
-        const linkedInUrl = 'https://www.linkedin.com/search/results/content/?keywords=' + encodeURIComponent(query) + '&sortBy=%22date_posted%22&f_TPR=r86400';
+        // Open live LinkedIn posts in a new tab
+        const linkedInUrl = 'https://www.linkedin.com/search/results/content/?keywords=' + encodeURIComponent(query) + '&sortBy=%22date_posted%22';
         window.open(linkedInUrl, '_blank');
       }
 
@@ -999,13 +1004,13 @@ def web_dashboard():
         const res = await fetch('/linkedin/search', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ query: query, candidate_id: activeCandidateId, max_results: 15 })
+          body: JSON.stringify({ query: query, candidate_id: activeCandidateId, max_results: 80 })
         });
         const data = await res.json();
         if (data.success) {
           const s = data.summary;
           const sumBox = document.getElementById('searchSummary');
-          sumBox.innerHTML = `Discovered: <strong>${s.total_discovered}</strong> | Passed C2C Filters (24h): <strong>${s.passed_filters}</strong> | Filtered Out: <strong>${s.filtered_out}</strong> | Duplicates Skipped: <strong>${s.duplicates_skipped}</strong>`;
+          sumBox.innerHTML = `Discovered: <strong>${s.total_discovered}</strong> | Passed C2C Filters: <strong>${s.passed_filters}</strong> | Filtered Out: <strong>${s.filtered_out}</strong> | Duplicates Skipped: <strong>${s.duplicates_skipped}</strong>`;
           sumBox.classList.remove('d-none');
           loadJobs();
         } else {

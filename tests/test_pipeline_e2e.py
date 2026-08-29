@@ -102,7 +102,7 @@ def test_full_pipeline_minimum_acceptance_flow(db_session, tmp_path, sample_resu
     assert sub_res["recruiter_email"] == "sarah.miller@techstaffsolutions.com"
     assert sub_res["match_score"] >= 70.0
     assert os.path.exists(sub_res["resume_pdf"])
-    assert "Application — Senior Python Developer" in sub_res["email_subject"]
+    assert "Submission : Senior Python Developer - Open for relocation" in sub_res["email_subject"]
 
     # 14. Attempt same job again -> 15. System prevents duplicate (SKIPPED_DUPLICATE)
     dup_sub_res = pipeline.process_and_submit_job(candidate_id=cand_id, job_id=job.id)

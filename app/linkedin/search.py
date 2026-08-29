@@ -16,29 +16,50 @@ class LinkedInSearcher:
     def __init__(self, context: BrowserContext):
         self.context = context
 
-    def search_posts(self, query: str, max_results: int = 25) -> List[Dict[str, Any]]:
-        """Searches LinkedIn posts for the query with past-24h filter and collects raw post data."""
+    def search_posts(self, query: str, max_results: int = 80) -> List[Dict[str, Any]]:
+        """Searches LinkedIn posts for the query and collects raw post data for mass outreach."""
         page: Page = self.context.new_page()
         encoded_query = urllib.parse.quote(query)
-        # LinkedIn content/posts search sorted by date posted (past 24h)
+        # LinkedIn content/posts search sorted by date posted
         search_url = f"https://www.linkedin.com/search/results/content/?keywords={encoded_query}&sortBy=%22date_posted%22"
 
-        logger.info(f"Navigating to LinkedIn search: {search_url}")
+        logger.info(f"Navigating to LinkedIn search: {search_url} (target: {max_results} posts)")
         results: List[Dict[str, Any]] = []
 
         try:
             page.goto(search_url, timeout=45000, wait_until="domcontentloaded")
             time.sleep(4)
 
-            # Scroll down smoothly to trigger dynamic lazy loading of post cards
+            # Scroll down smoothly and expand truncated content
             scroll_count = 0
-            while len(results) < max_results and scroll_count < 6:
+            while len(results) < max_results and scroll_count < 40:
+                # 1. Automatically click all "...see more" buttons so full post description (with recruiter email) is revealed
+                try:
+                    page.evaluate("""
+                    () => {
+                        const seeMoreBtns = document.querySelectorAll(
+                            "button.feed-shared-inline-show-more-text__see-more-less-toggle, button[aria-label*='see more' i], button.feed-shared-see-more, button[aria-label*='more' i]"
+                        );
+                        seeMoreBtns.forEach(b => { try { b.click(); } catch(e) {} });
+
+                        // Also click 'Show more results' if LinkedIn stops auto-scrolling
+                        const showMore = Array.from(document.querySelectorAll("button")).filter(
+                            b => b.innerText && (b.innerText.toLowerCase().includes("show more results") || b.innerText.toLowerCase().includes("see more results"))
+                        );
+                        showMore.forEach(b => { try { b.click(); } catch(e) {} });
+                    }
+                    """)
+                except Exception:
+                    pass
+
+                time.sleep(1.0)
+
                 # Extract post elements supporting both standard and modern SDUI listitems
                 post_elements = page.query_selector_all(
                     "div[role='listitem'], div.feed-shared-update-v2, div[data-urn*='activity'], div[data-component-type='LazyColumn'] > div > div, div.search-results-container div.artdeco-card"
                 )
 
-                logger.info(f"Discovered {len(post_elements)} post containers on page (scroll pass {scroll_count + 1})")
+                logger.info(f"Discovered {len(post_elements)} post containers on page (scroll pass {scroll_count + 1}, collected {len(results)} valid posts)")
 
                 for elem in post_elements:
                     try:
@@ -124,7 +145,6 @@ class LinkedInSearcher:
                                 post_url = f"https://www.linkedin.com/feed/update/urn:li:activity:{m_raw.group(1)}/"
 
                         if not post_url:
-                            logger.debug("Skipping container: could not resolve authentic LinkedIn post URL.")
                             continue
 
                         item = {
@@ -143,9 +163,9 @@ class LinkedInSearcher:
                     except Exception as item_err:
                         logger.debug(f"Skipping container due to parse error: {item_err}")
 
-                # Scroll down smoothly
-                page.evaluate("window.scrollBy(0, window.innerHeight * 1.5)")
-                time.sleep(2.5)
+                # Scroll down to load next wave of posts
+                page.evaluate("window.scrollBy(0, window.innerHeight * 2)")
+                time.sleep(2.0)
                 scroll_count += 1
 
         except Exception as e:

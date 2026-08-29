@@ -52,7 +52,7 @@ class PostFilter:
             return None
         matches = EMAIL_REGEX.findall(text)
         for m in matches:
-            clean = m.strip().lower()
+            clean = m.strip().lower().rstrip(".,;:!?)>\"'")
             # Filter out non-email garbage or image/domain extensions
             if clean.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg")):
                 continue
@@ -84,10 +84,8 @@ class PostFilter:
         title_lower = (post_data.get("job_title") or "").lower()
         full_text = f"{title_lower} {text_lower}"
 
-        # 1. 24-hour check
-        posted_at = post_data.get("posted_at", "")
-        if not self.is_within_24_hours(posted_at):
-            return False, f"Post is older than 24 hours ({posted_at})"
+        # 1. 24-hour check bypassed for mass mailing (all posts allowed)
+        # posted_at = post_data.get("posted_at", "")
 
         # 2. Exclusions Check (W2, Full-Time, Bench, Sales, Hotlist)
         for excl in EXCLUDED_KEYWORDS:

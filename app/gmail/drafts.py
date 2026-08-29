@@ -11,8 +11,8 @@ class EmailDraftBuilder:
 
     def build_subject(self, job_title: str) -> str:
         """Generates outreach email subject line."""
-        title = job_title.strip() if job_title else "Software Developer"
-        return f"Application — {title}"
+        title = job_title.strip() if job_title else "AI Engineer"
+        return f"Submission : {title} - Open for relocation"
 
     def extract_matched_skills_text(
         self, candidate_skills: List[str], job_text: str, default_skills: Optional[List[str]] = None

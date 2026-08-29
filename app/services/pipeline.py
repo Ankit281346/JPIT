@@ -117,7 +117,7 @@ class PipelineService:
     async def search_and_filter_linkedin_posts(
         self,
         search_query: str,
-        max_posts: int = 15,
+        max_posts: int = 80,
         mock_raw_posts: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Performs LinkedIn post discovery, filtering, deduplication, and stores valid jobs."""
