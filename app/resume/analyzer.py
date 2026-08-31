@@ -41,6 +41,23 @@ KNOWN_TITLES = [
 ]
 
 
+TITLE_SYNONYMS = {
+    "Data Scientist": ["Data Scientist", "Machine Learning", "ML Engineer", "AI Engineer", "Data Science", "NLP Engineer", "Deep Learning"],
+    "Machine Learning Engineer": ["Machine Learning Engineer", "ML Engineer", "Data Scientist", "AI Engineer", "Machine Learning", "LLM Engineer"],
+    "AI Engineer": ["AI Engineer", "GenAI Engineer", "LLM Engineer", "Machine Learning Engineer", "AI/ML Developer", "Data Scientist"],
+    "Python Developer": ["Python Developer", "Python Engineer", "Backend Python", "Django Developer", "FastAPI Developer", "Python AWS"],
+    "Java Developer": ["Java Developer", "Java Full Stack", "Backend Java", "Spring Boot Developer", "Java Engineer", "Core Java"],
+    "Java Full Stack Developer": ["Java Full Stack Developer", "Java Full Stack", "Java Developer", "Spring Boot Developer", "Java Angular", "Java React"],
+    "React Developer": ["React Developer", "Frontend Developer", "React Engineer", "UI Developer", "React.js Developer", "Frontend Engineer"],
+    "Full Stack Developer": ["Full Stack Developer", "Full Stack Engineer", "Fullstack", "MERN Stack Developer", "Full Stack Java", "Full Stack Python"],
+    "Data Engineer": ["Data Engineer", "Data Engineering", "PySpark Developer", "Snowflake Developer", "Big Data Engineer", "ETL Developer", "Databricks Developer"],
+    "DevOps Engineer": ["DevOps Engineer", "Cloud Engineer", "AWS DevOps", "Site Reliability Engineer", "SRE", "Kubernetes Engineer", "Cloud DevOps"],
+    ".NET Developer": [".NET Developer", "C# Developer", ".NET Core Developer", "DotNet Developer", "ASP.NET Developer"],
+    "Software Developer": ["Software Developer", "Software Engineer", "Full Stack Developer", "Backend Developer", "Frontend Developer"],
+    "QA Automation Engineer": ["QA Automation Engineer", "SDET", "QA Engineer", "Automation Tester", "Selenium Tester"],
+}
+
+
 class ResumeAnalyzer:
     def __init__(self):
         pass
@@ -98,3 +115,26 @@ class ResumeAnalyzer:
         query = f'"{clean_title}" C2C -W2 -Full-Time -Bench -Sales -Hotlist'
         logger.info(f"Generated LinkedIn search query: {query}")
         return query
+
+    def generate_query_variations(self, job_title: str) -> List[str]:
+        """Generates a comprehensive list of similar search phrase queries for high-volume job discovery."""
+        clean_title = job_title.strip().strip('"')
+        # Remove any boolean junk if passed
+        clean_title = re.sub(r'\b(c2c|corp-to-corp|w2|full-time|bench|sales|hotlist|-w2|-bench)\b', '', clean_title, flags=re.IGNORECASE).strip(' "\'')
+        if not clean_title:
+            clean_title = "Software Engineer"
+
+        synonyms = [clean_title]
+        for key, syn_list in TITLE_SYNONYMS.items():
+            if key.lower() in clean_title.lower() or clean_title.lower() in key.lower():
+                for s in syn_list:
+                    if s not in synonyms:
+                        synonyms.append(s)
+                break
+
+        variations = []
+        for syn in synonyms[:6]:
+            variations.append(f'"{syn}" C2C')
+            variations.append(f'"{syn}" "Corp-to-Corp"')
+            variations.append(f'"{syn}" "Contract"')
+        return variations

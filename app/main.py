@@ -1010,7 +1010,11 @@ def web_dashboard():
         if (data.success) {
           const s = data.summary;
           const sumBox = document.getElementById('searchSummary');
-          sumBox.innerHTML = `Discovered: <strong>${s.total_discovered}</strong> | Passed C2C Filters: <strong>${s.passed_filters}</strong> | Filtered Out: <strong>${s.filtered_out}</strong> | Duplicates Skipped: <strong>${s.duplicates_skipped}</strong>`;
+          let extraNote = '';
+          if (s.passed_filters === 0 && s.total_discovered > 0) {
+            extraNote = ` <br><small class="text-warning">⚠️ Note: ${s.filtered_out} posts lacked a recruiter email in the post body, and ${s.duplicates_skipped} were already discovered/sent in previous runs.</small>`;
+          }
+          sumBox.innerHTML = `Discovered: <strong>${s.total_discovered}</strong> | Passed C2C Filters: <strong>${s.passed_filters}</strong> | Filtered Out: <strong>${s.filtered_out}</strong> | Duplicates Skipped: <strong>${s.duplicates_skipped}</strong>${extraNote}`;
           sumBox.classList.remove('d-none');
           loadJobs();
         } else {

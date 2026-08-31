@@ -27,6 +27,11 @@ C2C_KEYWORDS = [
     r"\bc-2-c\b",
     r"\bcontract[- ]to[- ]hire\b",
     r"\bcontract\b",
+    r"\bcontractor\b",
+    r"\bsubcontract\b",
+    r"\bb2b\b",
+    r"\bcorp\b",
+    r"\bc2h\b",
 ]
 
 # Recruiter / hiring indicators
@@ -41,6 +46,12 @@ HIRING_INDICATORS = [
     r"\bclient requirement\b",
     r"\bopportunity\b",
     r"\bopenings?\b",
+    r"\bshare (?:cv|profile|resume|resumes|profiles)\b",
+    r"\bsend (?:cv|profile|resume|resumes|profiles)\b",
+    r"\breach me\b",
+    r"\bemail me\b",
+    r"\bneed\b",
+    r"\brequirement\b",
 ]
 
 EMAIL_REGEX = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
