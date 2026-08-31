@@ -4,16 +4,18 @@ from app.utils.logger import setup_logger
 
 logger = setup_logger("linkedin.filters")
 
-# Strict exclusion terms for C2C pipeline
+# Strict exclusion terms for C2C pipeline (specifically non-C2C and bench sales)
 EXCLUDED_KEYWORDS = [
-    r"\bw2\b",
-    r"\bfull[- ]?time\b",
-    r"\bbench\b",
-    r"\bsales\b",
-    r"\bhotlist\b",
+    r"\bw2\s+only\b",
+    r"\bonly\s+w2\b",
+    r"\bno\s+c2c\b",
+    r"\bc2c\s+not\s+(?:allowed|accepted|entertained)\b",
+    r"\bno\s+corp[- ]to[- ]corp\b",
     r"\blooking for bench\b",
     r"\bcandidate available\b",
     r"\breverse marketing\b",
+    r"\bbench\s+sales\b",
+    r"\bhotlist\b",
 ]
 
 # Required C2C confirmation terms
@@ -37,6 +39,8 @@ HIRING_INDICATORS = [
     r"\bposition\b",
     r"\brole\b",
     r"\bclient requirement\b",
+    r"\bopportunity\b",
+    r"\bopenings?\b",
 ]
 
 EMAIL_REGEX = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
@@ -50,7 +54,13 @@ class PostFilter:
         """Extracts the first valid professional recruiter email from post text."""
         if not text:
             return None
-        matches = EMAIL_REGEX.findall(text)
+        
+        # Normalize obfuscated emails e.g. "name [at] company.com", "name @ company.com", "name(at)company.com"
+        normalized_text = re.sub(r'[\(\[\{]\s*(?:at|@)\s*[\)\]\}]', '@', text, flags=re.IGNORECASE)
+        normalized_text = re.sub(r'\s+@\s+', '@', normalized_text)
+        normalized_text = re.sub(r'[\(\[\{]\s*(?:dot|\.)\s*[\)\]\}]', '.', normalized_text, flags=re.IGNORECASE)
+
+        matches = EMAIL_REGEX.findall(normalized_text)
         for m in matches:
             clean = m.strip().lower().rstrip(".,;:!?)>\"'")
             # Filter out non-email garbage or image/domain extensions
